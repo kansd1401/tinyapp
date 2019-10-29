@@ -18,6 +18,12 @@ app.post("/urls", (req, res) => {
   let templateVars = { shortURL: randomString, longURL: urlDatabase[randomString] };
   res.render("urls_show", templateVars);
 });
+
+app.post("/urls/:shortURL/delete", (req, res) => {
+  delete urlDatabase[req.params.shortURL]
+  res.redirect("/urls")
+});
+
 app.get("/u/:shortURL", (req, res) => {
   let longURL = urlDatabase[req.params.shortURL]
   res.redirect(longURL);
