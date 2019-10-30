@@ -29,7 +29,12 @@ const users = {
 app.post("/urls", (req, res) => {
   let randomString = generateRandomString()
   urlDatabase[randomString] = req.body.longURL;
-  let templateVars = { shortURL: randomString, longURL: urlDatabase[randomString], username: req.cookies["username"] };
+  let templateVars ={}
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { shortURL: randomString, longURL: urlDatabase[randomString], username: undefined };
+  }else{
+    templateVars = { shortURL: randomString, longURL: urlDatabase[randomString], username: users[req.cookies['user_id']]['email'] };
+  }
   res.render("urls_show", templateVars);
 });
 
@@ -39,12 +44,28 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie('username',req.body.username)
-  res.redirect("/urls")
+  let logged = false
+  for(let userId in users){
+    const id = users[userId]
+    if(id['email'] === req.body.email){
+      if(id['password'] === req.body.password){
+        console.log('got here',id)
+        res.cookie('user_id',id['id'])
+        res.redirect("/urls")
+        logged =true
+      }else{
+        res.send('Error 404: Invalid password')
+      }
+    }
+  }
+  if(!logged){
+    res.send('Error 404: Invalid email')
+  }
+
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('username')
+  res.clearCookie('user_id')
   res.redirect("/urls")
 });
 
@@ -69,24 +90,54 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-app.get("/register", (req, res) => {
+app.get("/login", (req, res) => {let templateVars ={}
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { urls: urlDatabase ,username: undefined};
+  }else{
+    templateVars = { urls: urlDatabase ,username: users[req.cookies['user_id']]['email']};
+  }
+  res.render("urls_login",templateVars);
+});
 
-  res.render("urls_register");
+app.get("/register", (req, res) => {
+  let templateVars ={}
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { urls: urlDatabase ,username: undefined};
+  }else{
+    templateVars = { urls: urlDatabase ,username: users[req.cookies['user_id']]['email']};
+  }
+  res.render("urls_register",templateVars);
 });
 
 app.get("/urls", (req, res) => {
-  let templateVars = { urls: urlDatabase ,username: req.cookies["username"]};
+  let templateVars ={}
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { urls: urlDatabase ,username: undefined};
+  }else{
+    templateVars = { urls: urlDatabase ,username: users[req.cookies['user_id']]['email']};
+  }
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  let templateVars = {username: req.cookies["username"]};
+  let templateVars ={}
+
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { username: undefined};
+  }else{
+    templateVars = {username: users[req.cookies['user_id']]['email']};
+  }
   res.render("urls_new", templateVars);
 });
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,username: req.cookies["username"]};
+  let templateVars ={}
+  if(req.cookies['user_id'] === undefined){
+    templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,username: undefined};
+    }else{
+    templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,username: users[req.cookies['user_id']]['email']};
+  }
   res.render("urls_show", templateVars);
 });
 
