@@ -80,6 +80,11 @@ app.post("/urls/:shortURL", (req, res) => {
 
 app.post("/register",(req,res) =>{
   const id = generateRandomString();
+  for(let userId in users){
+    if(users[userId]['email']=== req.body.email){
+      res.send('Error Account already exists for this email.')
+    }
+  }
   users[id]={'id': id,'email': req.body.email,'password': req.body.password}
   res.cookie('user_id',id)
   res.redirect('/urls')
