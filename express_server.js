@@ -4,7 +4,7 @@ const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session')
 const bcrypt = require('bcryptjs');
-
+const {getUserByEmail, urlsForUser, generateRandomString} = require('./helpers')
 app.use(cookieSession({
   name: 'session',
   keys: ['qwerty'],
@@ -19,12 +19,10 @@ const users = {
 }
 
 app.post("/urls", (req, res) => {
-  let randomString = generateRandomString()
-  urlDatabase[randomString] = { 'longURL': req.body.longURL, 'userId': req.session.userId};
-  console.log(urlDatabase[randomString])
-  let templateVars ={}
-  templateVars = { shortURL: randomString, longURL: urlDatabase[randomString]['longURL'], username: users[req.session.userId]['email'] };
-  res.render("urls_show", templateVars);
+  let randStr = generateRandomString()
+  urlDatabase[randStr] = { 'longURL': req.body.longURL, 'userId': req.session.userId};
+  let templateVars = { shortURL: randStr, longURL: urlDatabase[randStr]['longURL'], username: users[req.session.userId]['email'] };
+  res.redirect('/urls/'+randStr)
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -35,23 +33,17 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  let logged = false
-  for(let userId in users){
-    const id = users[userId]
-    if(id['email'] === req.body.email){
-      if(bcrypt.compareSync(req.body.password,id['password'])){
-        req.session.userId=id['id']
-        res.redirect("/urls")
-        logged =true
-      }else{
+  let id = getUserByEmail(req.body.email,users)
+  if(id){
+    if(bcrypt.compareSync(req.body.password, users[id]['password'])){
+      req.session.userId= id
+      res.redirect("/urls")
+    }else{
         res.send('Error 404: Invalid password')
-      }
     }
-  }
-  if(!logged){
+  }else {
     res.send('Error 404: Invalid email')
   }
-
 });
 
 app.post("/logout", (req, res) => {
@@ -73,17 +65,16 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect("/urls/"+req.params.shortURL)
 });
 
-app.post("/register",(req,res) =>{
+app.post("/register", (req, res) =>{
   const id = generateRandomString();
-  for(let userId in users){
-    if(users[userId]['email']=== req.body.email){
-      res.send('Error Account already exists for this email.')
-    }
+  if(getUserByEmail(req.body.email,users)){
+    res.send('Error Account already exists for this email.')
+  }else{
+    users[id]={'id': id,'email': req.body.email,'password': bcrypt.hashSync(req.body.password,10)}
+    console.log(users[id])
+    req.session.userId = id
+    res.redirect('/urls')
   }
-  users[id]={'id': id,'email': req.body.email,'password': bcrypt.hashSync(req.body.password,10)}
-  req.session.userId = id
-  console.log(req.session.userId)
-  res.redirect('/urls')
 });
 
 app.get("/u/:shortURL", (req, res) => {
@@ -95,53 +86,48 @@ app.get("/u/:shortURL", (req, res) => {
   }
 });
 
-app.get("/login", (req, res) => {let templateVars ={}
-  if(req.session.userId === undefined){
-    templateVars = { urls: urlDatabase ,username: undefined};
-  }else{
-    templateVars = { urls: urlDatabase ,username: users[req.session.userId]['email']};
-  }
+app.get("/login", (req, res) => {
+  let name = req.session.userId;
+  let email = '';
+  if(name === undefined) email = undefined;
+  else email = users[name]['email'];
+  templateVars = { urls: urlDatabase ,username: email}
   res.render("urls_login",templateVars);
 });
 
 app.get("/register", (req, res) => {
-  let templateVars ={}
-  if(req.session.userId === undefined){
-    templateVars = { urls: urlDatabase ,username: undefined};
-  }else{
-    templateVars = { urls: urlDatabase ,username: users[req.session.userId]['email']};
-  }
+  let name = req.session.userId;
+  let email = '';
+  if(name === undefined) email = undefined;
+  else email = users[name]['email'];
+  templateVars = { urls: urlDatabase ,username: email };
   res.render("urls_register",templateVars);
 });
 
 app.get("/urls", (req, res) => {
-  let templateVars ={}
-  if(req.session.userId === undefined){
-    res.redirect('/login')
-    }else{
-    templateVars = { urls: urlsForUser(req.session.userId) ,username: users[req.session.userId]['email']};
-  }
-  res.render("urls_index", templateVars);
-});
-
-app.get("/urls/new", (req, res) => {
-  let templateVars ={}
   if(req.session.userId === undefined){
     res.redirect('/login')
   }else{
-    templateVars = {username: users[req.session.userId]['email']};
+    let templateVars = { urls: urlsForUser(req.session.userId,urlDatabase) ,username: users[req.session.userId]['email']};
+    res.render("urls_index", templateVars);
   }
-  res.render("urls_new", templateVars);
 });
 
+app.get("/urls/new", (req, res) => {
+  if(req.session.userId === undefined){
+    res.redirect('/login')
+  }else{
+    let templateVars = {username: users[req.session.userId]['email']};
+    res.render("urls_new", templateVars);
+  }
+});
 
 app.get("/urls/:shortURL", (req, res) => {
-  let templateVars ={}
-  if(req.session.userId === undefined){
-    templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: undefined};
-    }else{
-    templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: users[req.session.userId]['email']};
-  }
+  let name = req.session.userId;
+  let email = '';
+  if(name === undefined) email = undefined;
+  else email = users[name]['email'];
+  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: email}
   res.render("urls_show", templateVars);
 });
 
@@ -150,23 +136,8 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
-
-const urlsForUser = (user) => {
-  let userUrls = {}
-  for(let id in urlDatabase){
-    if(urlDatabase[id]['userId'] === user){
-      userUrls[id] = urlDatabase[id]['longURL']
-    }
-  }
-  return userUrls
-}
-
-const generateRandomString = () => {
-  return Math.random().toString(36).substring(7);
-}
