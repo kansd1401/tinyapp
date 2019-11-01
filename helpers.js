@@ -14,7 +14,7 @@ const getUserByEmail = function(email, data) {
       return userId
     }
   }
-  return false;
+  return undefined;
 };
 
 const generateRandomString = () => {

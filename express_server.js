@@ -22,7 +22,7 @@ app.post("/urls", (req, res) => {
   let randStr = generateRandomString()
   urlDatabase[randStr] = { 'longURL': req.body.longURL, 'userId': req.session.userId};
   let templateVars = { shortURL: randStr, longURL: urlDatabase[randStr]['longURL'], username: users[req.session.userId]['email'] };
-  res.redirect('/urls/'+randStr)
+  res.render("urls_short", templateVars);
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -39,10 +39,10 @@ app.post("/login", (req, res) => {
       req.session.userId= id
       res.redirect("/urls")
     }else{
-        res.send('Error 404: Invalid password')
+        res.send('Error 401: Invalid password')
     }
   }else {
-    res.send('Error 404: Invalid email')
+    res.send('Error 401: Invalid email')
   }
 });
 
@@ -52,16 +52,6 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/urls/:shortURL/edit", (req, res) => {
-  res.redirect("/urls/"+req.params.shortURL)
-});
-
-app.post("/urls/:shortURL", (req, res) => {
-  if(req.session.userId){
-    urlDatabase[req.params.shortURL] = req.body.longURL;
-  }
-  else {
-    res.send('Error please login')
-  }
   res.redirect("/urls/"+req.params.shortURL)
 });
 
@@ -108,6 +98,7 @@ app.get("/urls", (req, res) => {
   if(req.session.userId === undefined){
     res.redirect('/login')
   }else{
+    console.log(urlDatabase)
     let templateVars = { urls: urlsForUser(req.session.userId,urlDatabase) ,username: users[req.session.userId]['email']};
     res.render("urls_index", templateVars);
   }
@@ -123,12 +114,16 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  let name = req.session.userId;
-  let email = '';
-  if(name === undefined) email = undefined;
-  else email = users[name]['email'];
-  let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: email}
-  res.render("urls_show", templateVars);
+  if(req.session.userId){
+    if(urlDatabase[req.params.shortURL]['userId'] === req.session.userId){
+      let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: users[req.session.userId]['email']}
+      res.render("urls_show", templateVars);
+    }else{
+      res.send('Error 401: Unauthorized')
+    }
+  }else{
+    res.redirect('/login')
+  }
 });
 
 app.get("/", (req, res) => {
