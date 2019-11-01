@@ -22,7 +22,7 @@ app.post("/urls", (req, res) => {
     let templateVars = { shortURL: randStr, longURL: urlDatabase[randStr]['longURL'], username: users[req.session.userId]['email'] };
     res.render("urls_show", templateVars);
   } else {
-    res.send('Error 401: LOG IN MY BOI');
+    res.status(401).send('LOG IN MY BOI');
   }
 });
 
@@ -32,11 +32,11 @@ app.post("/urls/:shortURL/delete", (req, res) => {
       delete urlDatabase[req.params.shortURL];
       res.redirect("/urls");
     } else {
-      res.send('Error 401: Ooh baby what is you doing (You cannot delete a usl that you did not submit');
+      res.status(401).send('Ooh baby what is you doing (You cannot delete a usl that you did not submit');
 
     }
   } else {
-    res.send('Error 401: LOG IN MY BOI');
+    res.status(401).send('LOG IN MY BOI');
   }
 });
 
@@ -47,10 +47,10 @@ app.post("/login", (req, res) => {
       req.session.userId = id;
       res.redirect("/urls");
     } else {
-      res.send('Error 401: Invalid password');
+      res.status(401).send('Invalid password');
     }
   } else {
-    res.send('Error 401: Invalid email');
+    res.status(401).send('Invalid email');
   }
 });
 
@@ -69,20 +69,20 @@ app.post("/urls/:shortURL", (req, res) => {
       urlDatabase[req.params.shortURL]['longURL'] = req.body.longURL;
       res.redirect("/urls");
     } else {
-      res.send('Error 401: THIS IS ILLEGAL');
+      res.status(401).send('THIS IS ILLEGAL');
     }
   } else {
-    res.send('Error 401: LOG IN MY BOI');
+    res.status(401).send('LOG IN MY BOI');
   }
 });
 
 app.post("/register", (req, res) =>{
   const id = generateRandomString();
   if (req.body.email === undefined || req.body.password === undefined) {
-    res.send("Error 406: Please fill the information");
+    res.status(406).send("Please fill the information");
   }
   if (getUserByEmail(req.body.email,users)) {
-    res.send('Error Account already exists for this email.');
+    res.status(409).send('Error Account already exists for this email.');
   } else {
     users[id] = {'id': id,'email': req.body.email,'password': bcrypt.hashSync(req.body.password,10)};
     req.session.userId = id;
@@ -99,7 +99,7 @@ app.get("/u/:shortURL", (req, res) => {
       res.redirect("http://" + url);
     }
   } else {
-    res.send('Error 404: Url does not exist');
+    res.status(404).send('Url does not exist');
   }
 });
 
@@ -121,7 +121,7 @@ app.get("/register", (req, res) => {
 
 app.get("/urls", (req, res) => {
   if (req.session.userId === undefined) {
-    res.send('Error 401: Please log in');
+    res.status(401).send('Please log in');
   } else {
     let templateVars = { urls: urlsForUser(req.session.userId,urlDatabase) ,username: users[req.session.userId]['email']};
     res.render("urls_index", templateVars);
@@ -144,13 +144,13 @@ app.get("/urls/:shortURL", (req, res) => {
         let templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]['longURL'] ,username: users[req.session.userId]['email']};
         res.render("urls_show", templateVars);
       } else {
-        res.send('Error 401: Unauthorized');
+        res.status(401).send('Unauthorized');
       }
     } else {
       res.redirect('/login');
     }
   } else {
-    res.send('Error 404: Url does not exist');
+    res.status(401).send('Url does not exist');
   }
 });
 
