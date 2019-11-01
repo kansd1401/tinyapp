@@ -93,11 +93,7 @@ app.post("/register", (req, res) =>{
 app.get("/u/:shortURL", (req, res) => {
   if (urlDatabase[req.params.shortURL]) {
     let url = urlDatabase[req.params.shortURL]['longURL'];
-    if (url[0] === 'h' && url[1] === 't' && url[2] === 't' && url[3] === 'p') {
-      res.redirect(url);
-    } else {
-      res.redirect("http://" + url);
-    }
+    res.redirect(url);
   } else {
     res.status(404).send('Url does not exist');
   }
